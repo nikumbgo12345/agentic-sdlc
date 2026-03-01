@@ -1,355 +1,132 @@
-# Agentic SDLC Reference Implementation Repository Plan
+# agentic-sdlc
 
-## Overview
-This repository implements a production-grade reference architecture for an agentic Software Development Lifecycle (SDLC) system that leverages autonomous agents to automate and optimize software development processes.
+A practical guide and reference implementation for implementing deterministic, agentic Software Development Life Cycle (SDLC) workflows using LangGraph and local LLMs (Ollama, qwen3-coder:30b).
 
-## Repository Structure
+## What This Repo Is
+
+This repository demonstrates how to build an agentic SDLC system using LangGraph to orchestrate local LLMs for software development tasks. It provides best practices, example workflows, and safety patterns for automating code generation, validation, and commit processes using local LLMs (Ollama, qwen3-coder:30b) rather than cloud APIs.
+
+## Why Deterministic Workflows Matter
+
+In software development automation, deterministic workflows ensure:
+- **Reproducible results**: Same inputs always produce same outputs
+- **Auditability**: Clear traceability of decisions and changes
+- **Debugging capability**: Easy to isolate and fix issues
+- **Safety**: Reduced risk of unintended code changes
+- **Compliance**: Meeting requirements for controlled environments
+
+LangGraph provides the orchestration layer to create deterministic, step-by-step workflows that can be audited and validated.
+
+## Quickstart
+
+```bash
+# Create Python virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Pull required Ollama model
+ollama pull qwen3-coder:30b
+```
+
+## Folder Structure
 
 ```
-agentic-sdlc-reference/
+agentic-sdlc/
 ├── README.md
-├── LICENSE
-├── CONTRIBUTING.md
-├── SECURITY.md
-├── .github/
-│   ├── workflows/
-│   │   ├── ci.yml
-│   │   ├── cd.yml
-│   │   ├── security-scan.yml
-│   │   └── release.yml
-│   └── ISSUE_TEMPLATE/
-├── docs/
-│   ├── architecture/
-│   ├── deployment/
-│   ├── api/
-│   └── development/
+├── requirements.txt
 ├── src/
+│   ├── __init__.py
+│   ├── workflow.py          # Main LangGraph workflow definition
 │   ├── agents/
-│   │   ├── core/
-│   │   ├── orchestrator/
-│   │   ├── task-executor/
-│   │   ├── knowledge-manager/
-│   │   └── monitoring/
-│   ├── services/
-│   │   ├── pipeline-engine/
-│   │   ├── artifact-manager/
-│   │   ├── code-analyzer/
-│   │   └── notification-service/
-│   ├── infrastructure/
-│   │   ├── database/
-│   │   ├── messaging/
-│   │   └── monitoring/
-│   └── shared/
-│       ├── models/
-│       ├── utils/
-│       └── constants/
-├── config/
-│   ├── production/
-│   ├── staging/
-│   └── development/
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
-├── deployments/
-│   ├── kubernetes/
-│   │   ├── base/
-│   │   ├── overlays/
-│   │   └── helm/
-│   ├── docker/
-│   └── terraform/
-└── tools/
-    ├── cli/
-    └── scripts/
+│   │   ├── __init__.py
+│   │   ├── planner.py       # Planning agent
+│   │   ├── implementer.py   # Code implementation agent
+│   │   ├── validator.py     # Validation agent
+│   │   └── committer.py     # Commit agent
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── safety.py        # Safety checks and validation utilities
+│   │   └── ollama_client.py # Ollama client wrapper
+│   └── config/
+│       └── __init__.py      # Configuration management
+├── examples/
+│   └── sample_workflow.py   # Example usage
+└── tests/
+    └── test_workflow.py     # Unit tests
 ```
 
-## Core Components
+## Example Workflow
 
-### 1. Agent Architecture
-```
-Agents/
-├── Core Agent
-│   ├── AgentManager
-│   ├── AgentRegistry
-│   └── AgentLifecycle
-├── Task Executor Agents
-│   ├── CodeGenerationAgent
-│   ├── TestingAgent
-│   ├── SecurityAgent
-│   └── DeploymentAgent
-├── Orchestrator Agent
-│   ├── WorkflowEngine
-│   ├── TaskScheduler
-│   └── ResourceAllocator
-└── Knowledge Management
-    ├── KnowledgeBase
-    ├── LearningEngine
-    └── ContextManager
-```
+The core workflow follows these steps:
 
-### 2. Pipeline Engine
-- Multi-stage pipeline execution
-- Dynamic workflow composition
-- Resource management and scaling
-- Failure recovery mechanisms
-- Parallel task execution
+1. **Plan**: 
+   - Analyze requirements
+   - Break down into tasks
+   - Create implementation plan
 
-### 3. Artifact Management
-- Versioned code repositories
-- Build artifacts storage
-- Test result tracking
-- Security scan reports
-- Compliance documentation
+2. **Implement**: 
+   - Generate code based on plan
+   - Handle multiple code files
+   - Maintain context
 
-### 4. Monitoring & Observability
-- Distributed tracing
-- Metrics collection
-- Alerting system
-- Performance monitoring
-- Audit logging
+3. **Validate**: 
+   - Run static analysis
+   - Execute unit tests
+   - Verify correctness
 
-## Deployment Architecture
+4. **Commit**: 
+   - Create git commit
+   - Add descriptive commit message
+   - Push to remote
 
-### Production Deployment
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Load Balancer │───▶│  API Gateway    │───▶│  Service Mesh   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  Orchestrator   │    │  Task Executors │    │  Knowledge      │
-│  Agent Cluster  │    │  Agent Cluster  │    │  Management     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  Database       │    │  Message Queue  │    │  Storage        │
-│  (PostgreSQL)   │    │  (Kafka/Rabbit) │    │  (S3/MinIO)     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+```python
+# Example workflow execution
+from src.workflow import agentic_workflow
+
+# Input: requirements specification
+requirements = "Create a Python function that sorts a list of dictionaries by a given key"
+
+# Execute workflow
+result = agentic_workflow.run(requirements)
+print(result)
 ```
 
-## Technology Stack
+## Safety Principles
 
-### Backend Services
-- **Language**: Python 3.11+
-- **Framework**: FastAPI + Celery
-- **Database**: PostgreSQL 15, Redis 7
-- **Message Queue**: Apache Kafka
-- **Containerization**: Docker
-- **Orchestration**: Kubernetes 1.25+
+1. **Input Sanitization**: All inputs are validated before processing
+2. **Output Validation**: Generated code is checked for syntax and correctness
+3. **Execution Isolation**: Code generation happens in isolated environments
+4. **Reversible Changes**: All changes can be reverted or reviewed before commit
+5. **Rate Limiting**: Prevents abuse of local resources
+6. **Configuration Management**: All LLM parameters are configurable and auditable
 
-### Monitoring & Observability
-- **Tracing**: OpenTelemetry + Jaeger
-- **Metrics**: Prometheus + Grafana
-- **Logging**: ELK Stack (Elasticsearch, Logstash, Kibana)
-- **Alerting**: Alertmanager + PagerDuty
+## Roadmap
 
-### CI/CD
-- **CI**: GitHub Actions
-- **CD**: ArgoCD + Helm
-- **Security**: Snyk, Trivy, OWASP ZAP
+### Phase 1: Core Workflow
+- [x] Basic LangGraph workflow
+- [x] Local LLM integration (Ollama)
+- [x] Planning and implementation agents
+- [x] Validation and commit agents
 
-## Security Implementation
+### Phase 2: Enhanced Safety
+- [ ] Advanced input/output sanitization
+- [ ] Execution sandboxing
+- [ ] Comprehensive testing framework
+- [ ] Error recovery mechanisms
 
-### Authentication & Authorization
-- OAuth2.0 with JWT tokens
-- Role-based access control (RBAC)
-- API key management
-- Multi-factor authentication
+### Phase 3: Advanced Features
+- [ ] Multi-agent collaboration
+- [ ] Git integration improvements
+- [ ] Model selection and switching
+- [ ] Performance optimization
 
-### Data Protection
-- Encryption at rest and in transit
-- Secure credential management
-- Audit logging for all operations
-- Compliance with SOC2, GDPR
+### Phase 4: Documentation and Examples
+- [ ] Detailed API documentation
+- [ ] Real-world use case examples
+- [ ] Performance benchmarks
+- [ ] Security audit guidelines
 
-### Vulnerability Management
-- Automated security scanning
-- Dependency monitoring
-- Vulnerability assessment
-- Incident response procedures
-
-## Development Workflow
-
-### Branching Strategy
-```
-main      ←  Release branches
-│
-├─ develop  ←  Feature branches
-│   │
-│   └─ feature/*  ←  Individual features
-│
-└─ hotfix/*       ←  Critical fixes
-```
-
-### Code Quality Standards
-- Pre-commit hooks (black, flake8, mypy)
-- Unit test coverage > 85%
-- Integration testing
-- End-to-end testing
-- Code review process
-
-## Configuration Management
-
-### Environment Variables
-```yaml
-# config/production/env.yaml
-database:
-  host: db.prod.example.com
-  port: 5432
-  ssl: true
-
-agents:
-  max_concurrent: 10
-  timeout: 300
-
-monitoring:
-  tracing_enabled: true
-  metrics_exporter: prometheus
-```
-
-### Infrastructure as Code
-- Terraform modules for cloud resources
-- Kubernetes manifests with Helm charts
-- Environment-specific configurations
-- Automated infrastructure provisioning
-
-## Scalability Considerations
-
-### Horizontal Scaling
-- Stateful services with persistent storage
-- Stateless agents for easy scaling
-- Load balancing across service instances
-- Database read replicas
-
-### Performance Optimization
-- Caching layers (Redis)
-- Asynchronous processing
-- Database connection pooling
-- Resource auto-scaling
-
-## Monitoring & Alerting
-
-### Key Metrics
-- Agent execution time
-- Pipeline success rate
-- Resource utilization
-- Error rates and latency
-- Throughput metrics
-
-### Alerting Rules
-- Service availability < 99.9%
-- Critical task failures
-- Resource exhaustion
-- Security incidents
-- Performance degradation
-
-## Backup & Recovery
-
-### Data Backup Strategy
-- Database snapshots (daily)
-- Artifact backups (weekly)
-- Configuration backups (real-time)
-- Point-in-time recovery
-
-### Disaster Recovery
-- Multi-region deployment
-- Automated failover
-- Recovery time objectives (RTO)
-- Recovery point objectives (RPO)
-
-## Release Management
-
-### Versioning Strategy
-- Semantic versioning (MAJOR.MINOR.PATCH)
-- Release branches for stability
-- Hotfix releases for critical bugs
-- Feature flags for controlled rollouts
-
-### Release Process
-1. Feature development
-2. Automated testing
-3. Security scanning
-4. Staging deployment
-5. Manual approval
-6. Production deployment
-7. Post-deployment monitoring
-
-## Documentation
-
-### API Documentation
-- OpenAPI 3.0 specification
-- Interactive Swagger UI
-- SDK generation
-- Usage examples
-
-### Developer Documentation
-- Architecture diagrams
-- Component specifications
-- Deployment guides
-- Troubleshooting guides
-
-## Testing Strategy
-
-### Test Coverage
-- Unit tests (85%+ coverage)
-- Integration tests
-- End-to-end tests
-- Performance tests
-- Security tests
-
-### Test Environments
-- Development (local)
-- Staging (pre-production)
-- Production (canary deployments)
-
-## Maintenance & Operations
-
-### Operational Procedures
-- Daily health checks
-- Automated maintenance tasks
-- Regular security updates
-- Performance tuning
-- Capacity planning
-
-### Support & Maintenance
-- 24/7 monitoring
-- Incident response procedures
-- Regular system updates
-- Performance optimization
-- User support channels
-
-## Compliance & Governance
-
-### Regulatory Compliance
-- GDPR compliance
-- SOC2 Type II
-- ISO 27001
-- NIST cybersecurity framework
-
-### Governance
-- Code ownership policies
-- Change management procedures
-- Audit trails
-- Data retention policies
-
-## Future Enhancements
-
-### Planned Features
-- Machine learning for predictive analytics
-- Advanced agent collaboration
-- Multi-cloud deployment support
-- Enhanced security capabilities
-- Advanced monitoring and alerting
-
-### Architecture Evolution
-- Microservices decomposition
-- Serverless components
-- Enhanced AI/ML integration
-- Improved agent autonomy
-- Better observability
-
----
-
-*This repository provides a comprehensive foundation for building and operating an agentic SDLC system that can scale to enterprise-level requirements while maintaining security, reliability, and maintainability.*
+*Note: This is a living repository. Contributions and feedback are welcome.*

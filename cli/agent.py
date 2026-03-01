@@ -1,15 +1,18 @@
 import argparse
 import subprocess
 from pathlib import Path
-from typing import Tuple
+from typing import Dict, Tuple
 
 from langchain_ollama import OllamaLLM
 
 MODEL = "qwen3-coder:30b"
 llm = OllamaLLM(model=MODEL)
 
+
 def project_root() -> Path:
+    # cli/agentic.py -> project root is one level up from cli/
     return Path(__file__).resolve().parent.parent
+
 
 def run_shell(command: str, cwd: Path | None = None) -> Tuple[int, str, str]:
     result = subprocess.run(
@@ -21,6 +24,7 @@ def run_shell(command: str, cwd: Path | None = None) -> Tuple[int, str, str]:
     )
     return result.returncode, result.stdout, result.stderr
 
+
 def write_file(rel_path: str, content: str) -> Path:
     root = project_root()
     file_path = root / rel_path
@@ -28,27 +32,47 @@ def write_file(rel_path: str, content: str) -> Path:
     file_path.write_text(content)
     return file_path
 
+
 def generate_markdown(prompt: str) -> str:
+    # Light guardrails for local model consistency
     system = (
         "You are a senior software architect and technical writer.\n"
         "Output MUST be valid Markdown.\n"
-        "Be practical and concrete; avoid hype.\n"
-        "Do not invent APIs/commands; if unsure, state assumptions.\n"
+        "Be practical, concrete, and avoid hype.\n"
+        "Do not invent APIs or commands; if unsure, state assumptions.\n"
     )
     return llm.invoke(system + "\n\n" + prompt).strip()
+
 
 def cmd_init(_: argparse.Namespace) -> None:
     root = project_root()
     dirs = [
-        "agents", "tools", "workflows", "cli", "docs", "examples",
-        "architecture", ".github/workflows"
+        "agents",
+        "tools",
+        "workflows",
+        "cli",
+        "docs",
+        "examples",
+        "architecture",
+        ".github/workflows",
     ]
     for d in dirs:
         (root / d).mkdir(parents=True, exist_ok=True)
 
-    write_file(".gitignore", ".venv/\n__pycache__/\n*.pyc\n.DS_Store\n")
+    # Minimal .gitignore
+    gitignore = """\
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+"""
+    write_file(".gitignore", gitignore)
+
+    # Minimal placeholder docs index
     write_file("docs/README.md", "# Docs\n\n- SAFETY.md\n- WORKFLOW.md\n- TOOLS.md\n")
+
     print(f"Initialized structure under: {root}")
+
 
 def cmd_plan(args: argparse.Namespace) -> None:
     prompt = f"""
@@ -73,8 +97,10 @@ Include sections:
     path = write_file("PLAN.md", md)
     print(f"Saved {path}")
 
+
 def cmd_docs(_: argparse.Namespace) -> None:
-    readme = generate_markdown(f"""
+    # README.md
+    readme_prompt = f"""
 Generate a professional README.md for an open-source repository called "agentic-sdlc".
 It teaches best practices for Agentic SDLC using LangGraph and local LLMs (Ollama, {MODEL}).
 
@@ -86,21 +112,26 @@ Include:
 - Example workflow (plan -> implement -> validate -> commit)
 - Safety principles
 - Roadmap
-""")
+Keep it engineering-focused.
+"""
+    readme = generate_markdown(readme_prompt)
     print(f"Saved {write_file('README.md', readme)}")
 
-    arch = generate_markdown("""
+    # ARCHITECTURE.md
+    arch_prompt = """
 Write ARCHITECTURE.md that explains:
-- Why LangGraph state machines over free-form agents
+- Why LangGraph state machines (determinism) over free-form agents
 - Tool boundary design (shell wrapper, allowlists, cwd, no hidden side effects)
 - Logging/audit strategy
 - How Git is used as a validation layer
 - How to extend with new workflows/tools
-Include a small ASCII diagram.
-""")
+Include a simple architecture diagram in ASCII.
+"""
+    arch = generate_markdown(arch_prompt)
     print(f"Saved {write_file('ARCHITECTURE.md', arch)}")
 
-    safety = generate_markdown("""
+    # docs/SAFETY.md
+    safety_prompt = """
 Write docs/SAFETY.md for agentic coding workflows.
 Include:
 - Human-in-the-loop gates
@@ -109,10 +140,13 @@ Include:
 - Avoiding destructive ops
 - Reproducibility requirements
 - What NOT to automate
-""")
+Make it practical.
+"""
+    safety = generate_markdown(safety_prompt)
     print(f"Saved {write_file('docs/SAFETY.md', safety)}")
 
-    workflow = generate_markdown("""
+    # docs/WORKFLOW.md
+    workflow_prompt = """
 Write docs/WORKFLOW.md describing a deterministic Agentic SDLC workflow:
 PLAN -> IMPLEMENT -> VALIDATE -> TEST -> COMMIT -> REVIEW
 
@@ -124,10 +158,12 @@ For each stage provide:
 - Transition criteria
 
 Include a short example: "Add a new CLI command".
-""")
+"""
+    workflow = generate_markdown(workflow_prompt)
     print(f"Saved {write_file('docs/WORKFLOW.md', workflow)}")
 
-    tools = generate_markdown("""
+    # docs/TOOLS.md
+    tools_prompt = """
 Write docs/TOOLS.md defining tool boundaries for a local agent system.
 Include:
 - filesystem rules (where writes allowed)
@@ -136,34 +172,49 @@ Include:
 - GitHub publishing rules (gh CLI)
 - logging/trace expectations
 Give concrete examples.
-""")
+"""
+    tools = generate_markdown(tools_prompt)
     print(f"Saved {write_file('docs/TOOLS.md', tools)}")
+
 
 def cmd_commit(_: argparse.Namespace) -> None:
     root = project_root()
+    # Ensure repo exists
     rc, _, _ = run_shell("git rev-parse --is-inside-work-tree", cwd=root)
     if rc != 0:
         run_shell("git init", cwd=root)
 
     run_shell("git add .", cwd=root)
     rc, out, err = run_shell('git commit -m "Agentic update"', cwd=root)
+    # If nothing to commit, git returns nonzero; treat as informative.
     print(out.strip() if out.strip() else err.strip())
+
 
 def cmd_publish(args: argparse.Namespace) -> None:
     root = project_root()
-    rc, out, err = run_shell(f"gh repo create {args.name} --public --source=. --push", cwd=root)
-    print(out.strip() if rc == 0 else (err.strip() if err.strip() else out.strip()))
+    # Requires gh auth to already be done
+    cmd = f"gh repo create {args.name} --public --source=. --push"
+    rc, out, err = run_shell(cmd, cwd=root)
+    if rc != 0:
+        print(err.strip() if err.strip() else out.strip())
+        return
+    print(out.strip())
+
 
 def main():
     parser = argparse.ArgumentParser(prog="agentic")
     sub = parser.add_subparsers(dest="command")
 
-    sub.add_parser("init")
-    p_plan = sub.add_parser("plan")
+    sub.add_parser("init", help="Create standard repo structure")
+
+    p_plan = sub.add_parser("plan", help="Generate PLAN.md")
     p_plan.add_argument("description")
-    sub.add_parser("docs")
-    sub.add_parser("commit")
-    p_pub = sub.add_parser("publish")
+
+    sub.add_parser("docs", help="Generate README/ARCHITECTURE/SAFETY/WORKFLOW/TOOLS")
+
+    sub.add_parser("commit", help="git add + commit")
+
+    p_pub = sub.add_parser("publish", help="Create GitHub repo and push (requires gh auth)")
     p_pub.add_argument("name")
 
     args = parser.parse_args()
@@ -179,6 +230,7 @@ def main():
         cmd_publish(args)
     else:
         parser.print_help()
+
 
 if __name__ == "__main__":
     main()
