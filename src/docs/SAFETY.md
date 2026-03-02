@@ -1,144 +1,158 @@
 # SAFETY.md
 
-## Safety Guidelines for Agentic Coding Workflows
-
-This document outlines safety practices for automated coding systems to prevent unintended consequences, data loss, and security vulnerabilities.
+Safety guidelines for agentic coding workflows
 
 ## Human-in-the-Loop Gates
 
 ### Critical Decision Points
-- **Code Execution**: Any code that modifies production systems or executes with elevated privileges must require explicit human approval
-- **Deployment Operations**: Automated deployments to production environments must be blocked until human verification
-- **Data Modification**: Any operation that modifies or deletes data (database, file systems, cloud resources) requires human confirmation
-- **Security Changes**: Modifications to authentication, authorization, or security configurations must be reviewed by security personnel
+- **Code Generation Approval**: All code changes must be reviewed by a human before execution
+- **File System Modifications**: Any file creation, deletion, or modification requires explicit human confirmation
+- **External API Calls**: All external service interactions must be manually approved
+- **Deployment Operations**: Any deployment or release actions require human sign-off
+- **Security-sensitive Changes**: Modifications to authentication, authorization, or security configurations must be reviewed by security personnel
 
-### Implementation Requirements
-- All human gates must be clearly marked in the workflow
-- Timeout mechanisms should be implemented (e.g., 10-minute window for approval)
-- Audit logs must record all human interventions
-- Escalation paths should be defined for unresponsive gates
+### Review Requirements
+- **Pull Request Integration**: Automated changes must be submitted as pull requests for human review
+- **Change Summary**: Automated agents must provide clear summaries of changes for human review
+- **Risk Assessment**: Each automated operation must include a risk assessment and mitigation plan
 
 ## Command Allowlisting / Denylisting
 
 ### Allowlisted Commands
-- `git status`, `git diff`, `git log`
-- `npm install`, `pip install`
-- `docker build`, `docker run`
-- `kubectl apply`, `kubectl delete`
-- `terraform plan`, `terraform apply`
+- `git status`, `git diff`, `git add`, `git commit`, `git push`
+- `npm install`, `yarn install`, `pip install`
+- `docker build`, `docker run`, `docker push`
+- `kubectl apply`, `kubectl delete`, `kubectl get`
+- `ls`, `cat`, `grep`, `find`
+- `echo`, `printf`, `basename`, `dirname`
 
 ### Denylisted Commands
-- `rm -rf`
-- `dd`
-- `mkfs`
-- `shutdown`
-- `sudo`
-- `chmod 777`
-- `wget` or `curl` to arbitrary URLs without validation
+- `rm -rf`, `dd`, `mkfs`, `format`
+- `su`, `sudo`, `chmod 777`
+- `curl`, `wget` (unless explicitly allowed for specific endpoints)
+- `shutdown`, `reboot`, `poweroff`
+- `kill`, `pkill`, `killall`
+- Any command that modifies system-level configurations without explicit human approval
 
-### Implementation Requirements
-- All commands must be validated against allowlist before execution
-- Denylist should be maintained as a comprehensive security reference
-- Dynamic command validation should be implemented in the agent's execution layer
-- Logs must record all command executions, including those that fail validation
+### Implementation Notes
+- Commands are validated at execution time
+- Denylisted commands are blocked entirely
+- Allowlisted commands are permitted with logging
+- Configuration changes to allowlists require human approval
 
 ## Secrets Hygiene
 
-### Secret Management
-- All secrets must be stored in secure vaults (HashiCorp Vault, AWS Secrets Manager, etc.)
-- Secrets should never be hardcoded in source code or configuration files
-- Environment variables should be used for secret injection, not direct file references
-- Secrets should be rotated regularly (minimum 90 days for most credentials)
+### Secret Storage
+- All secrets must be stored in encrypted vaults (e.g., HashiCorp Vault, AWS Secrets Manager)
+- Secrets must never be stored in code repositories or logs
+- Secrets must be rotated regularly (minimum every 90 days)
 
-### Access Controls
-- Least privilege principle: agents should only access secrets needed for their specific tasks
-- Secrets should be rotated automatically when agents are compromised
-- All secret access should be logged and audited
-- Secrets should be automatically cleared from memory after use
+### Access Control
+- Secrets must be accessed only through secure, authenticated channels
+- Least privilege principle: agents must only access secrets necessary for their operations
+- Access logs must be maintained for all secret access
 
-### Implementation Requirements
-- All automated systems must fail gracefully if secrets are not available
-- Secret rotation should be integrated into the agent's lifecycle management
-- Regular audits should verify no unauthorized secret access has occurred
+### Environment Handling
+- Secrets must never be passed as command-line arguments
+- Environment variables containing secrets must be cleared after use
+- Secrets must be injected at runtime, not compiled into binaries
 
 ## Avoiding Destructive Operations
 
-### Safe Operation Principles
-- All destructive operations must be reversible or have clear rollback procedures
-- File system operations should be validated against a safe directory whitelist
-- Database operations should be executed in transactions with proper rollback capabilities
-- Cloud resource operations should be validated against resource type allowlists
+### File System Safety
+- All file operations must be performed in a sandboxed environment
+- File deletions must be reversible (backup before deletion)
+- Directory operations must be validated against a whitelist of allowed paths
+- Operations on system directories (e.g., `/etc`, `/usr`) are strictly prohibited
 
-### Validation Requirements
-- Before any destructive operation, validate that:
-  - The operation is within allowed scope
-  - The target resources exist and are accessible
-  - The operation will not cause unintended side effects
-  - Backup procedures are in place
+### Database Operations
+- All database changes must be wrapped in transactions
+- Destructive operations (DELETE, DROP) must require explicit human confirmation
+- Data backups must be performed before any destructive operation
+- Schema changes must be validated against a test environment first
 
-### Implementation Requirements
-- Destructive operations should be flagged with clear warnings
-- Operations should be tested in staging environments before production use
-- Rollback mechanisms should be automatically triggered on failure
-- All destructive operations should be logged with full context
+### Network Operations
+- Network connectivity must be limited to pre-approved endpoints
+- Port scanning operations are prohibited
+- All network traffic must be logged and monitored
 
 ## Reproducibility Requirements
 
-### Version Control
-- All automated workflows must be version-controlled with clear commit history
-- Dependencies should be pinned to specific versions (lock files, package managers)
-- Configuration files should be stored in version control with clear documentation
-- Workflow definitions should be declarative and deterministic
-
 ### Environment Consistency
-- All agents must run in reproducible environments (containerized, VM-based)
-- Dependencies should be installed from trusted sources only
-- Environment variables should be consistent across all execution contexts
-- All system state should be captured and restored as needed
+- All agents must operate in identical environments
+- Dependencies must be pinned to specific versions
+- Container images must be built from deterministic sources
+- Environment variables must be consistent across all executions
 
-### Implementation Requirements
-- Automated testing should validate reproducibility of workflows
-- All workflow outputs should be deterministic given the same inputs
-- State should be explicitly managed and not rely on implicit system state
-- Versioning strategy should be applied to all components
+### Execution State
+- All agent operations must be idempotent where possible
+- State changes must be logged and replayable
+- Execution history must be preserved for debugging
+- Version control of agent configurations is required
+
+### Output Validation
+- Generated code must pass automated tests before human review
+- Generated documentation must be validated against templates
+- Generated artifacts must be compared against expected outputs
 
 ## What NOT to Automate
 
 ### High-Risk Operations
-- **Production Deployments**: Manual review required for all production changes
-- **Security Configuration**: Authentication, authorization, network policies
-- **Data Migration**: Large-scale data operations with potential for corruption
-- **System Shutdown**: Any operation that could affect availability
-- **Financial Operations**: Payment processing, billing, account management
+- **System-level modifications**: Kernel updates, system configuration changes
+- **Security-sensitive tasks**: Certificate management, firewall rule changes
+- **Data migration**: Large-scale data transfers, schema changes
+- **Production deployments**: Direct deployment to production environments
 
-### Human-Centric Tasks
-- **Code Review**: Complex judgment calls require human expertise
-- **Strategic Planning**: Business decisions and architectural choices
-- **User Experience**: UI/UX decisions that require human empathy
-- **Legal Compliance**: Regulatory and compliance decisions
-- **Crisis Management**: Emergency response and troubleshooting
+### Creative Tasks
+- **Code architecture decisions**: System design, architectural patterns
+- **Business logic design**: Feature requirements, user experience decisions
+- **Quality assurance**: Manual testing, user acceptance testing
+- **Strategic planning**: Roadmap decisions, feature prioritization
 
-### Implementation Requirements
-- Clear boundaries should be defined between automated and manual processes
-- Risk assessments should be performed before any automation decision
-- Manual override mechanisms should be available for all automated systems
-- Regular review of automation scope should be conducted to ensure continued safety
+### Human-Centric Activities
+- **Code review**: Human judgment on code quality, maintainability
+- **Stakeholder communication**: Client meetings, project status updates
+- **Training and mentoring**: Knowledge transfer, skill development
+- **Creative problem solving**: Innovative solutions, design thinking
 
-## Emergency Procedures
+### Regulatory Compliance
+- **Legal review**: Contract terms, compliance requirements
+- **Audit processes**: Internal and external audits
+- **Regulatory submissions**: Government filings, compliance reports
 
-### Immediate Actions
-- Any automated system failure should trigger alerts to human operators
-- All automated operations should have clear "emergency stop" mechanisms
-- Backup and recovery procedures should be tested regularly
-- Incident response protocols should be clearly documented
+### Exception Handling
+- **Emergency response**: Crisis management, incident response
+- **Ethical decision making**: Moral dilemmas, ethical considerations
+- **Complex negotiation**: Multi-party negotiations, conflict resolution
 
-### Post-Incident Review
-- All incidents should be documented and analyzed
-- Root cause analysis should be performed for any automation failures
-- Safety measures should be updated based on lessons learned
-- Regular safety audits should be conducted on automated systems
+## Monitoring and Alerting
+
+### Safety Metrics
+- Track all denied operations
+- Monitor for unusual patterns in automated behavior
+- Log all human approvals and interventions
+- Monitor for security incidents
+
+### Incident Response
+- Immediate human intervention required for safety violations
+- Automated rollback procedures for failed operations
+- Clear escalation paths for safety concerns
+- Post-incident analysis and process improvement
+
+## Compliance Requirements
+
+### Industry Standards
+- Adhere to SOC 2, ISO 27001, or equivalent security standards
+- Follow applicable data protection regulations (GDPR, CCPA)
+- Maintain audit trails for all operations
+- Comply with organizational security policies
+
+### Documentation
+- All safety procedures must be documented and maintained
+- Change logs for safety configurations
+- Regular safety training for all team members
+- Incident reporting and analysis processes
 
 ---
-
 *Last Updated: 2023*
-*This document is a living standard and should be updated regularly based on operational experience and security considerations.*
+*This document is a living specification and should be updated as automation capabilities evolve*

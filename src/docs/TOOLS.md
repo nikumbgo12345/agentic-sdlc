@@ -1,192 +1,169 @@
-# Tools and Boundaries for Local Agent System
+# Tools and Boundaries
 
-This document defines the operational boundaries and constraints for tools used in our local agent system. These boundaries ensure security, predictability, and controlled execution of agent operations.
+This document defines the operational boundaries and constraints for local agent tools in our system. These boundaries ensure security, predictability, and maintainability of automated operations.
 
 ## Filesystem Rules
 
 ### Allowed Write Locations
-Agents may write to:
-- **Temporary directories**: `/tmp/agent-<timestamp>` or `C:\temp\agent-<timestamp>` (platform-specific)
-- **Agent-specific workspaces**: `/var/lib/agent/<agent-id>/workspace/` (Linux) or `C:\ProgramData\agent\<agent-id>\workspace\` (Windows)
-- **Output directories**: `/var/lib/agent/<agent-id>/output/` (Linux) or `C:\ProgramData\agent\<agent-id>\output\` (Windows)
+Agents may only write to:
+- `$HOME/.agent-data/` (created on first use)
+- `$HOME/.cache/agent-cache/` (for temporary caching)
+- `$HOME/Downloads/agent-output/` (for exportable results)
 
-### Disallowed Write Locations
-Agents **must not** write to:
-- System directories: `/etc`, `/bin`, `/usr/bin`, `/lib`
-- User home directories: `~/.ssh`, `~/Documents`, `~/Downloads`
-- Root filesystem: `/`, `/var`, `/home`
-- Any directory outside of the agent's designated workspace
-
-### Example Allowed Operations
+### Example
 ```bash
-# ✅ Valid - writing to temporary directory
-mkdir -p /tmp/agent-123456789
-echo "output" > /tmp/agent-123456789/result.txt
+# ✅ Allowed
+echo "output" > $HOME/.agent-data/my-task.json
+mkdir -p $HOME/.cache/agent-cache/tmp && echo "cache" > $HOME/.cache/agent-cache/tmp/data.txt
 
-# ✅ Valid - writing to agent workspace
-mkdir -p /var/lib/agent/abc123/workspace
-echo "data" > /var/lib/agent/abc123/workspace/data.json
+# ❌ Not Allowed
+echo "output" > /etc/config.txt
+echo "output" > /tmp/myfile.txt
 ```
 
-### Example Disallowed Operations
-```bash
-# ❌ Invalid - attempting to write to system directory
-echo "config" > /etc/agent.conf
+### Restrictions
+- No writes to system directories (`/usr`, `/bin`, `/etc`)
+- No writes to parent directories of allowed locations
+- No symbolic link resolution outside allowed paths
+- No file operations on `/tmp` or `/var/tmp`
 
-# ❌ Invalid - attempting to write to user directory
-echo "output" > ~/.config/agent/output.txt
-```
-
-## Shell Rules
+## Shell Command Rules
 
 ### Allowlisted Commands
-Agents may execute the following commands:
-- `ls`, `cat`, `grep`, `find`, `which`, `whereis`
-- `mkdir`, `rm`, `cp`, `mv`, `chmod`, `chown`
-- `python3`, `node`, `bash`, `sh`
-- `git` (with specific restrictions)
-- `curl`, `wget`
-- `tar`, `gzip`, `gunzip`
-- `ps`, `top`, `kill`
+Agents may execute only these commands:
+- `ls`, `cat`, `grep`, `find`, `stat`, `pwd`, `basename`, `dirname`
+- `mkdir`, `cp`, `mv`, `rm`, `chmod`, `chown`
+- `git`, `gh`, `curl`, `wget`, `tar`, `unzip`
+- `python3`, `node`, `bash` (limited to script execution)
+- `date`, `whoami`, `id`, `uname`
 
-### Disallowed Commands
-Agents **must not** execute:
-- `sudo`, `su`, `passwd`, `useradd`, `userdel`
-- `dd`, `mkfs`, `mount`, `umount`
-- `rm -rf /`, `rm -rf ~`
-- Any command that modifies system state or permissions
-- `ssh`, `scp`, `telnet`, `ftp`
-
-### Example Allowed Operations
+### Example
 ```bash
-# ✅ Valid - basic file operations
-ls -la /tmp
-grep "pattern" /var/log/app.log
-mkdir -p /tmp/agent-workspace
-cp file1.txt file2.txt
+# ✅ Allowed
+ls -la $HOME/.agent-data/
+mkdir -p $HOME/.cache/agent-cache/
+git status
+curl -s https://api.github.com/repos/user/repo
 
-# ✅ Valid - network operations
-curl -O https://example.com/data.json
-wget https://example.com/file.txt
-```
-
-### Example Disallowed Operations
-```bash
-# ❌ Invalid - system modification
-sudo apt-get update
+# ❌ Not Allowed
 rm -rf /
-sudo useradd eviluser
+chmod 777 /etc/passwd
+ping google.com
 ```
 
 ## Git Rules
 
-### Allowed Git Operations
-Agents may execute:
-- `git clone` (only from allowlisted repositories)
-- `git pull` (only on existing repositories)
-- `git status`, `git log`, `git diff`
-- `git add`, `git commit`, `git push` (only to allowlisted branches)
-- `git config --global user.name`, `user.email`
+### Repository Operations
+Agents may:
+- Clone repositories to `$HOME/.agent-data/`
+- Create new branches with `git checkout -b`
+- Commit changes with `git commit -m`
+- Push to remote with `git push origin <branch>`
+- Pull changes with `git pull origin <branch>`
 
-### Repository Restrictions
-Agents may only operate on repositories:
-- Hosted on allowlisted domains: `github.com`, `gitlab.com`
-- Within allowlisted organizations: `mycompany/agent-repos`
-- With specific repository patterns: `agent-*`, `project-*`
+### Restrictions
+- No direct repository creation (`git init`)
+- No force pushes (`git push --force`)
+- No access to `.git` directory outside of allowed operations
+- No modification of git config outside of agent-controlled settings
 
-### Branch Restrictions
-Agents may only push to:
-- `main`, `develop`, `feature/*`
-- `release/*`, `hotfix/*`
-- Any branch matching `agent-*`
-
-### Example Allowed Operations
+### Example
 ```bash
-# ✅ Valid - cloning from allowlisted repo
-git clone https://github.com/mycompany/agent-repos.git
+# ✅ Allowed
+git clone https://github.com/user/repo.git $HOME/.agent-data/repo
+cd $HOME/.agent-data/repo && git checkout -b feature-branch
+git add . && git commit -m "Update"
 
-# ✅ Valid - pushing to allowed branch
-git add .
-git commit -m "Update"
-git push origin main
-```
-
-### Example Disallowed Operations
-```bash
-# ❌ Invalid - cloning from unauthorized domain
-git clone https://evil.com/repo.git
-
-# ❌ Invalid - pushing to unauthorized branch
-git push origin master
+# ❌ Not Allowed
+git init
+git push --force origin main
+echo "config" > .git/config
 ```
 
 ## GitHub Publishing Rules
 
-### GitHub CLI Usage
+### gh CLI Usage
 Agents may use `gh` CLI for:
-- `gh repo create` (only for allowlisted organization)
-- `gh release create` (only for tagged releases)
-- `gh pr create` (only for allowlisted branches)
-- `gh issue create` (only for allowlisted repositories)
+- Creating issues: `gh issue create`
+- Creating pull requests: `gh pr create`
+- Uploading releases: `gh release create`
+- Managing repositories: `gh repo create`
 
-### Repository Permissions
-Agents may only publish to:
-- Repositories in `mycompany/agent-projects`
-- Repositories with `agent-*` prefix
-- Repositories where `gh` is configured with proper credentials
+### Restrictions
+- No repository deletion
+- No access to organization-level commands
+- No direct API token management
+- No access to `gh auth` or credential management
 
-### Example Allowed Operations
+### Example
 ```bash
-# ✅ Valid - creating release
-gh release create v1.2.3 --notes "Release notes"
+# ✅ Allowed
+gh issue create --title "Bug Report" --body "Issue description"
+gh pr create --title "Fix bug" --body "Fixes #123"
+gh release create v1.0.0 --notes "Release notes"
 
-# ✅ Valid - creating pull request
-gh pr create --title "Fix bug" --body "Fixes issue #123"
-```
-
-### Example Disallowed Operations
-```bash
-# ❌ Invalid - creating repository in unauthorized organization
-gh repo create evilorg/repo
-
-# ❌ Invalid - creating issue in unauthorized repository
-gh issue create --repo evilorg/repo --title "Bug"
+# ❌ Not Allowed
+gh repo delete my-repo
+gh auth login
+gh org list
 ```
 
 ## Logging and Trace Expectations
 
-### Log Output Format
-All agent operations must output structured logs in JSON format:
+### Logging Format
+All agent operations must log to `$HOME/.agent-data/logs/` with timestamped JSON format:
+
 ```json
 {
-  "timestamp": "2023-12-01T10:00:00Z",
-  "agent_id": "abc123",
-  "operation": "file_write",
+  "timestamp": "2023-10-15T14:30:00Z",
+  "operation": "git_checkout",
   "status": "success",
+  "duration_ms": 1250,
   "details": {
-    "path": "/tmp/agent-123456789/result.txt",
-    "size": 1024
+    "repository": "user/repo",
+    "branch": "feature-branch"
   }
 }
 ```
 
 ### Trace Requirements
-- All operations must include a unique trace ID
-- Operations must be logged at `INFO` level or higher
-- Failed operations must be logged at `ERROR` level with stack traces
-- Timing information must be recorded for all operations
+- All operations must be traceable to a unique task ID
+- Operations must log start and end timestamps
+- Error operations must include stack trace or error details
+- All file operations must log the full path used
 
-### Example Log Output
-```bash
-# Operation log
-{"timestamp":"2023-12-01T10:00:00Z","agent_id":"abc123","operation":"git_clone","status":"success","details":{"repo":"https://github.com/mycompany/agent-repos.git","trace_id":"trace-456789"}}
-
-# Error log
-{"timestamp":"2023-12-01T10:00:05Z","agent_id":"abc123","operation":"file_write","status":"error","details":{"path":"/etc/config.conf","error":"Permission denied","trace_id":"trace-456789"}}
+### Example Log Entry
+```json
+{
+  "timestamp": "2023-10-15T14:30:00Z",
+  "operation": "file_write",
+  "status": "success",
+  "duration_ms": 50,
+  "details": {
+    "path": "/home/user/.agent-data/output.json",
+    "size_bytes": 1024,
+    "task_id": "task-12345"
+  }
+}
 ```
 
-### Log Storage
-- Logs must be written to `/var/log/agent/<agent-id>/`
-- Log rotation must occur daily
-- Logs must be retained for 30 days
-- Error logs must be sent to centralized monitoring system
+### Error Handling
+- All errors must be logged with status "error"
+- Critical errors must be reported to monitoring system
+- Failed operations must include recovery steps if applicable
+- No sensitive information should appear in logs
+
+### Example Error Log
+```json
+{
+  "timestamp": "2023-10-15T14:30:05Z",
+  "operation": "git_push",
+  "status": "error",
+  "duration_ms": 2000,
+  "details": {
+    "error": "remote rejected",
+    "task_id": "task-12345",
+    "retry_count": 3
+  }
+}
+```

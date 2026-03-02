@@ -1,2 +1,2 @@
 [console_scripts]
-agentic-sdlc = agentic_sdlc.agentic:main
+agentic = agentic_sdlc.agentic:main

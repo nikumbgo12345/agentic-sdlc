@@ -1,154 +1,139 @@
-# ARCHITECTURE.md
+# Architecture
 
-## Overview
+## Why LangGraph State Machines over Free-Form Agents
 
-This document describes the architectural principles and design decisions for our AI agent system, focusing on LangGraph-based state machines, secure tool execution, and operational reliability.
+Free-form agents lack structure and predictability. They can wander into unintended behaviors, make inconsistent decisions, or fail to terminate properly. LangGraph state machines provide:
 
-## Why LangGraph State Machines Over Free-Form Agents
-
-We use LangGraph state machines instead of free-form agents for several practical reasons:
-
-- **Predictable behavior**: State machines enforce clear transitions and prevent agents from "going off the rails" into unintended actions
-- **Easier debugging**: With explicit states and transitions, we can trace exactly what the agent did and why
-- **Better security**: We can audit and restrict state transitions, making it harder for malicious inputs to cause unexpected behavior
-- **Maintainability**: Clear state boundaries make it easier to understand, modify, and extend agent behavior
-- **Operational reliability**: State machines provide deterministic execution paths that are easier to monitor and alert on
+- **Explicit state transitions** that are easy to reason about and test
+- **Clear boundaries** between agent phases (planning, execution, validation)
+- **Deterministic behavior** that enables reliable deployment and monitoring
+- **Easier debugging** through explicit state tracking and transition logging
 
 ## Tool Boundary Design
 
+Tools must be carefully sandboxed to prevent unintended side effects:
+
 ### Shell Wrapper
-All external tool execution goes through a controlled shell wrapper that:
-- Runs in a sandboxed environment with limited privileges
-- Enforces strict command whitelisting
-- Prevents command injection through input sanitization
-- Logs all executed commands with arguments
+- Tools execute in isolated shell environments
+- Each tool has its own dedicated execution context
+- No shared state between tool invocations
 
 ### Allowlists
-- Only pre-approved commands can be executed
-- Each tool has a defined set of allowed arguments and flags
-- Configuration files define tool permissions (e.g., `tools.yaml`)
+- Only pre-approved commands and file paths are permitted
+- Tools cannot execute arbitrary shell commands
+- File system access is restricted to explicitly allowed directories
 
-### Working Directory
+### Working Directory (cwd)
 - Tools execute in a dedicated, isolated working directory
-- No access to parent or sibling directories
-- Directory is cleaned up after each tool execution
-- No cross-contamination between tool executions
+- No access to parent process working directory
+- All tool operations are confined to this boundary
 
 ### No Hidden Side Effects
-- All tool outputs are captured and logged
-- No file system modifications outside of controlled paths
-- No network connections beyond explicitly allowed domains
-- No environment variable modifications
+- Tools cannot modify global state or environment variables
+- All tool outputs must be explicitly returned via stdout/stderr
+- No background processes or daemon creation allowed
 
-## Logging and Audit Strategy
+## Logging/Audit Strategy
 
-### Structured Logging
-All agent actions are logged in structured JSON format:
+### Core Requirements
+- **Complete traceability** of all agent decisions and tool usage
+- **Audit-ready logs** for compliance and debugging
+- **Structured logging** for automated analysis
+
+### Log Structure
 ```json
 {
   "timestamp": "2023-10-01T12:00:00Z",
-  "agent_id": "reviewer-123",
-  "action": "execute_tool",
-  "tool_name": "git_status",
-  "input": {"repo_path": "/tmp/repo-abc"},
-  "output": {"status": "clean"},
-  "duration_ms": 42,
-  "user_id": "user-456"
+  "agent_id": "task_executor_123",
+  "workflow": "deploy_app",
+  "step": "validate_config",
+  "input": { "config": "..." },
+  "output": { "valid": true },
+  "tool_calls": [
+    {
+      "tool": "validate_yaml",
+      "args": { "file": "config.yaml" },
+      "result": { "valid": true }
+    }
+  ],
+  "duration_ms": 123
 }
 ```
 
-### Audit Trail
-- Every state transition is recorded
-- Tool execution logs are stored separately but linked to the agent session
-- Session IDs tie all logs together for traceability
-- Logs are retained for 90 days with automated archival
-
-### Monitoring
-- Real-time alerts for failed tool executions
-- Anomaly detection on execution patterns
-- Resource usage monitoring (CPU, memory, disk)
+### Storage
+- Logs written to structured format (JSON) to stdout
+- Aggregated in centralized logging system
+- Retention policies applied per log type
 
 ## Git as Validation Layer
 
-We use Git as a validation layer in several ways:
+Git serves as the authoritative validation layer for all agent operations:
 
-### State Validation
-- Agent state is periodically committed to a Git repository
-- Each state transition creates a new Git commit with metadata
-- This allows us to rollback to previous valid states if needed
-- Git history provides an immutable audit log of agent decisions
+### Configuration Validation
+- All agent configurations are stored in Git
+- Changes must be committed and reviewed before deployment
+- Git hooks validate configuration syntax and policy compliance
 
-### Configuration Management
-- All tool configurations are stored in Git
-- Changes to allowed tools or parameters require pull requests
-- Version control ensures we can track when and why tool permissions changed
+### Workflow Integrity
+- Workflows are version-controlled and immutable
+- Each workflow execution is tied to a specific Git commit
+- Rollbacks are possible by reverting to previous commits
 
-### Workflow Validation
-- Workflow definitions are stored in Git
-- Each workflow change is reviewed and tested
-- Git hooks validate workflow syntax and security before deployment
+### Change Tracking
+- Every tool invocation is logged with Git context
+- Audits can trace back to exact code versions used
+- Policy violations are flagged through Git diff analysis
 
 ## Extending with New Workflows/Tools
 
 ### Adding New Tools
-1. Define tool in `tools.yaml` with:
-   - Name and description
-   - Allowed arguments and flags
-   - Required permissions
-   - Output format specification
-2. Implement tool in the shell wrapper
-3. Add to allowlist in the configuration
-4. Test with automated test suite
-5. Create Git commit with documentation
+1. Create tool in isolated directory with:
+   - `tool.sh` - executable script
+   - `metadata.json` - tool description and parameters
+   - `allowlist.txt` - permitted commands/paths
+2. Add to tool registry in Git
+3. Run integration tests
+4. Deploy with new commit
 
 ### Adding New Workflows
-1. Define workflow in `workflows.yaml`
-2. Create state machine definition using LangGraph
-3. Implement state transition logic
-4. Add to workflow registry
+1. Define workflow in YAML format
+2. Create state machine definition
+3. Implement validation logic
+4. Add to Git repository
 5. Test with sample inputs
-6. Document workflow behavior and expected inputs
 
-### Example Extension Process
-```
-1. Create tool definition in tools.yaml
-2. Implement shell wrapper logic
-3. Add to allowlist
-4. Write test cases
-5. Commit to Git with documentation
-6. Deploy to staging
-7. Validate with automated tests
-8. Promote to production
-```
-
-## System Diagram
+### Extension Points
+- **Plugin system** for workflow composition
+- **Hook system** for pre/post processing
+- **Configuration-driven** tool selection and execution
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   User Input    │───▶│   LangGraph     │───▶│   Tool Executor │
-│                 │    │   State Machine │    │                 │
+│   Agent Core    │    │   Tool Registry │    │   Workflow      │
+│                 │    │                 │    │   Definition    │
+│  ┌───────────┐  │    │  ┌───────────┐  │    │  ┌───────────┐  │
+│  │  State    │  │    │  │  Tool     │  │    │  │  YAML     │  │
+│  │  Machine  │  │    │  │  Config   │  │    │  │  Schema   │  │
+│  └───────────┘  │    │  └───────────┘  │    │  └───────────┘  │
+│                 │    │                 │    │                 │
+│  ┌───────────┐  │    │  ┌───────────┐  │    │  ┌───────────┐  │
+│  │  Input    │  │    │  │  Shell    │  │    │  │  State    │  │
+│  │  Handler  │  │    │  │  Wrapper  │  │    │  │  Graph    │  │
+│  └───────────┘  │    │  └───────────┘  │    │  └───────────┘  │
+│                 │    │                 │    │                 │
+│  ┌───────────┐  │    │  ┌───────────┐  │    │  ┌───────────┐  │
+│  │  Output   │  │    │  │  Allowlist│  │    │  │  Validator│  │
+│  │  Handler  │  │    │  │  Check    │  │    │  │  Logic    │  │
+│  └───────────┘  │    │  └───────────┘  │    │  └───────────┘  │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-                              │                        │
-                              ▼                        ▼
-                    ┌─────────────────┐    ┌─────────────────┐
-                    │   State Store   │    │   Shell Wrapper │
-                    │                 │    │                 │
-                    └─────────────────┘    └─────────────────┘
-                              │                        │
-                              ▼                        ▼
-                    ┌─────────────────┐    ┌─────────────────┐
-                    │   Git Validator │    │   Audit Logger  │
-                    │                 │    │                 │
-                    └─────────────────┘    └─────────────────┘
+        │                       │                       │
+        └───────────────────────┼───────────────────────┘
+                                │
+                    ┌─────────────────┐
+                    │    Git Layer    │
+                    │                 │
+                    │  Version Control│
+                    │  Policy Check   │
+                    │  Audit Trail    │
+                    └─────────────────┘
 ```
-
-## Implementation Notes
-
-- All configurations are version-controlled in Git
-- Tool execution is asynchronous with timeouts
-- State machine transitions are idempotent where possible
-- Error handling includes rollback to previous valid states
-- Regular security audits of tool allowlists
-- Automated testing for all workflow and tool changes
-
-This architecture balances flexibility with security, allowing us to extend functionality while maintaining operational control and auditability.

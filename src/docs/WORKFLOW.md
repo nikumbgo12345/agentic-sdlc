@@ -1,274 +1,283 @@
 # Agentic SDLC Workflow
 
-This document describes a deterministic workflow for software development using autonomous agents. The workflow ensures consistent, traceable, and reliable software delivery through structured stages.
+## Overview
 
-## Workflow Stages
+This document describes a deterministic workflow for software development using agentic approaches. The workflow consists of six sequential stages that ensure quality, traceability, and maintainability of software artifacts.
 
-### PLAN
+## Stage-by-Stage Breakdown
 
-**Inputs**
-- Problem statement or user story
-- Stakeholder requirements
-- Technical constraints
+### 1. PLAN
+
+**Inputs:**
+- Product requirements or user stories
+- Technical specifications
 - Existing codebase analysis
-- Resource availability
+- Stakeholder feedback
+- Resource constraints
 
-**Outputs**
-- Development plan with timeline
-- Technical specification document
+**Outputs:**
+- Detailed development plan
+- Implementation tasks with dependencies
+- Acceptance criteria
 - Risk assessment
 - Resource allocation
-- Acceptance criteria
 
-**Tools Allowed**
-- Requirements tracking tools (Jira, Confluence)
-- Code analysis tools (SonarQube, CodeClimate)
-- Project management platforms
-- Documentation tools (Markdown editors)
+**Tools allowed:**
+- Project management tools (Jira, Notion)
+- Requirements tracking systems
+- Code analysis tools
+- Documentation generators
+- Planning templates
 
-**Failure Modes**
+**Failure modes:**
 - Incomplete requirements gathering
-- Unrealistic timeline estimation
-- Missing technical constraints
-- Insufficient resource planning
+- Overly optimistic timeline estimation
+- Missing dependencies in task breakdown
+- Insufficient risk identification
+- Poor stakeholder alignment
 
-**Transition Criteria**
-- Stakeholder approval of plan
-- Resource commitment secured
-- Risk mitigation strategies implemented
-- Acceptance criteria defined
+**Transition criteria:**
+- All stakeholders approve the plan
+- Tasks are decomposed to granular level
+- Resource allocation is confirmed
+- Risk mitigation strategies are documented
+- Acceptance criteria are clearly defined
 
-### IMPLEMENT
+### 2. IMPLEMENT
 
-**Inputs**
-- Approved development plan
-- Technical specification
-- Codebase state
-- Development environment setup
-- Version control access
+**Inputs:**
+- Development plan from PLAN stage
+- Technical specifications
+- Codebase structure
+- Existing code patterns
+- Documentation templates
 
-**Outputs**
-- Working implementation
-- Code changes
-- Documentation updates
-- Unit test coverage
+**Outputs:**
+- New or modified source code
+- Implementation documentation
+- Code comments
+- Unit test scaffolding
+- Integration points
 
-**Tools Allowed**
-- Version control systems (Git, GitHub)
+**Tools allowed:**
 - IDEs and code editors
-- Build tools (Maven, Gradle, npm)
-- Code quality tools (ESLint, Pylint)
-- CI/CD platforms
+- Version control systems (Git)
+- Build systems
+- Code quality tools
+- Debugging tools
+- Code generation utilities
 
-**Failure Modes**
-- Code quality issues
-- Build failures
-- Integration problems
-- Security vulnerabilities
+**Failure modes:**
+- Code doesn't meet specification
+- Violation of existing code patterns
+- Missing documentation
+- Integration issues with existing code
 - Performance regressions
-
-**Transition Criteria**
-- Code compiles successfully
-- All unit tests pass
-- Code quality standards met
-- Documentation updated
-- Code reviewed and approved
-
-### VALIDATE
-
-**Inputs**
-- Implemented code changes
-- Test suite results
-- Code quality metrics
-- Documentation updates
-- Integration points
-
-**Outputs**
-- Validated implementation
-- Quality assurance report
-- Performance metrics
-- Security audit results
-- Compatibility verification
-
-**Tools Allowed**
-- Automated testing frameworks
-- Performance monitoring tools
-- Security scanning tools
-- Compatibility testing platforms
-- Quality metrics dashboards
-
-**Failure Modes**
-- Test failures
-- Performance degradation
 - Security vulnerabilities
-- Compatibility issues
-- Quality metric violations
 
-**Transition Criteria**
-- All automated tests pass
-- Performance benchmarks met
-- Security requirements satisfied
-- Compatibility verified
-- Quality metrics within acceptable ranges
+**Transition criteria:**
+- All implementation tasks are completed
+- Code follows established patterns and standards
+- Documentation is created and reviewed
+- Unit tests are written and passing
+- No conflicts with existing codebase
 
-### TEST
+### 3. VALIDATE
 
-**Inputs**
-- Validated implementation
-- Test environment setup
-- Test cases and scenarios
+**Inputs:**
+- Implemented code
+- Implementation documentation
+- Unit test results
+- Code quality metrics
 - Integration points
-- Previous test results
 
-**Outputs**
-- Test execution results
-- Defect reports
-- Test coverage metrics
+**Outputs:**
+- Validation report
+- Code quality assessment
 - Performance benchmarks
+- Security analysis
+- Compliance verification
+
+**Tools allowed:**
+- Static code analysis tools
+- Code coverage tools
+- Performance profilers
+- Security scanners
+- Automated validation scripts
+- Manual testing tools
+
+**Failure modes:**
+- Code quality issues not caught
+- Performance regressions
+- Security vulnerabilities
+- Compliance violations
+- Integration failures
+- Documentation gaps
+
+**Transition criteria:**
+- All quality gates are passed
+- Code meets established quality standards
+- Performance benchmarks are met
+- Security requirements are satisfied
+- Documentation is complete and accurate
+- No critical issues remain
+
+### 4. TEST
+
+**Inputs:**
+- Validated code
+- Test plan
+- Test data
+- Integration points
+- Performance requirements
+
+**Outputs:**
+- Test execution results
+- Bug reports
+- Test coverage metrics
+- Performance metrics
 - Regression test results
 
-**Tools Allowed**
+**Tools allowed:**
 - Test automation frameworks
 - Manual testing tools
-- Test case management systems
-- Bug tracking systems
+- Test data generators
 - Performance testing tools
+- Bug tracking systems
+- Continuous integration systems
 
-**Failure Modes**
-- Test execution failures
-- Defect discovery
+**Failure modes:**
+- Test coverage gaps
+- False negatives in test results
 - Test environment issues
-- Coverage gaps
-- False positive/negative results
+- Inadequate test data
+- Flaky tests
+- Missing edge case testing
 
-**Transition Criteria**
-- All test cases executed
-- Defects resolved or documented
-- Test coverage meets requirements
-- Performance acceptable
-- No critical defects found
+**Transition criteria:**
+- All tests pass according to acceptance criteria
+- Test coverage meets minimum thresholds
+- No critical or high severity bugs remain
+- Performance requirements are satisfied
+- Regression tests confirm no new issues
 
-### COMMIT
+### 5. COMMIT
 
-**Inputs**
-- Approved test results
-- Validated implementation
-- Documentation updates
+**Inputs:**
+- Tested and validated code
+- Test results
+- Documentation
+- Release notes
 - Code review approvals
-- Release planning
 
-**Outputs**
+**Outputs:**
 - Committed code to repository
+- Versioned release
+- Updated documentation
 - Release artifacts
-- Deployment scripts
-- Version tags
-- Integration with deployment pipeline
+- Integration with CI/CD pipeline
 
-**Tools Allowed**
-- Version control systems
-- Deployment automation tools
-- Release management platforms
-- Artifact repositories
+**Tools allowed:**
+- Version control systems (Git)
 - CI/CD pipelines
+- Artifact repositories
+- Release management tools
+- Deployment automation tools
 
-**Failure Modes**
-- Commit conflicts
+**Failure modes:**
+- Code conflicts during merge
+- Incomplete documentation
+- Failed CI/CD pipeline
+- Incorrect version tagging
+- Missing release notes
 - Deployment failures
-- Artifact corruption
-- Versioning issues
-- Integration problems
 
-**Transition Criteria**
-- All code changes committed
-- Artifacts built and validated
-- Release tags applied
-- Deployment pipeline triggered
-- Integration with production systems
+**Transition criteria:**
+- All code changes are committed
+- Version is properly tagged
+- Documentation is updated and published
+- CI/CD pipeline passes
+- Release artifacts are created
+- Deployment preparation is complete
 
-### REVIEW
+### 6. REVIEW
 
-**Inputs**
+**Inputs:**
 - Committed code
 - Test results
-- Performance metrics
 - Documentation
-- Deployment status
+- Performance metrics
+- Release artifacts
 
-**Outputs**
-- Review report
-- Lessons learned
-- Improvement recommendations
+**Outputs:**
+- Code review feedback
+- Process improvement recommendations
+- Quality metrics report
+- Lessons learned documentation
 - Process optimization suggestions
-- Knowledge base updates
 
-**Tools Allowed**
-- Code review platforms
+**Tools allowed:**
+- Code review tools
 - Analytics dashboards
+- Feedback collection systems
 - Process improvement tools
-- Knowledge management systems
-- Stakeholder feedback collection
+- Metrics reporting systems
 
-**Failure Modes**
-- Review delays
-- Incomplete feedback
-- Process bottlenecks
-- Knowledge loss
-- Improvement missed
+**Failure modes:**
+- Incomplete code review process
+- Missing feedback collection
+- No process improvement identified
+- Quality metrics not properly analyzed
+- Lessons learned not documented
 
-**Transition Criteria**
-- Stakeholder feedback collected
-- Process improvements identified
-- Lessons learned documented
-- Knowledge base updated
-- Workflow optimization implemented
+**Transition criteria:**
+- All code review feedback is addressed
+- Process improvements are identified and documented
+- Quality metrics are analyzed and reported
+- Lessons learned are captured
+- Workflow optimization suggestions are implemented
+- Stage is officially closed
 
-## Example: Add a New CLI Command
+## Example: Add a new CLI command
 
 ### PLAN
-- **Input**: Request to add "status" command to CLI tool
-- **Output**: 
-  - Technical spec: Command syntax, options, output format
-  - Timeline: 3 days development, 1 day testing
-  - Risk: None identified
-  - Acceptance criteria: Command returns system status, handles errors gracefully
-- **Tools**: Jira, Confluence, Markdown editor
+- Input: User story requesting new CLI command for data export
+- Output: Development plan with 3 tasks (command structure, implementation, documentation)
+- Tools: Jira, Notion
+- Failure: Missing export format requirements
+- Criteria: Story points assigned, dependencies identified
 
 ### IMPLEMENT
-- **Input**: Approved technical spec
-- **Output**: 
-  - New command implementation
-  - Unit tests (95% coverage)
-  - Documentation update
-- **Tools**: Git, VS Code, Jest, Markdown editor
+- Input: Development plan
+- Output: New command implementation with unit tests
+- Tools: IDE, Git, testing framework
+- Failure: Command doesn't handle edge cases
+- Criteria: All unit tests pass, documentation created
 
 ### VALIDATE
-- **Input**: Implemented command
-- **Output**: 
-  - Command compiles successfully
-  - Unit tests pass
-  - No quality issues found
-- **Tools**: ESLint, Jest, SonarQube
+- Input: Implemented command
+- Output: Validation report showing command meets requirements
+- Tools: Static analysis, performance profiler
+- Failure: Security vulnerability in argument parsing
+- Criteria: No critical issues found, performance acceptable
 
 ### TEST
-- **Input**: Validated implementation
-- **Output**: 
-  - All tests pass (100% success rate)
-  - Performance acceptable
-  - No defects found
-- **Tools**: Jest, Manual testing, Performance tools
+- Input: Validated command
+- Output: Test results showing command works correctly
+- Tools: Test automation framework, manual testing
+- Failure: Command fails on specific input combinations
+- Criteria: All test cases pass, no regressions
 
 ### COMMIT
-- **Input**: Approved test results
-- **Output**: 
-  - Code committed to main branch
-  - Release artifacts built
-  - Version tag applied
-- **Tools**: Git, GitHub Actions, Artifact repository
+- Input: Tested command
+- Output: Merged code with updated documentation
+- Tools: Git, CI/CD pipeline
+- Failure: Merge conflicts in documentation
+- Criteria: CI pipeline passes, version tagged
 
 ### REVIEW
-- **Input**: Committed code
-- **Output**: 
-  - Review report: Command works as expected
-  - Lessons learned: Documentation improvements needed
-  - Process optimization: Streamlined testing approach
-- **Tools**: GitHub, Confluence, Process improvement tool
+- Input: Committed command
+- Output: Review report with process improvements
+- Tools: Code review tool, metrics dashboard
+- Failure: No feedback collected
+- Criteria: All feedback addressed, process improvements documented

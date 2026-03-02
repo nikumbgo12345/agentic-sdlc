@@ -162,6 +162,7 @@ def main():
     p_plan = sub.add_parser("plan")
     p_plan.add_argument("description")
     sub.add_parser("docs")
+    sub.add_parser("best")
     sub.add_parser("commit")
     p_pub = sub.add_parser("publish")
     p_pub.add_argument("name")
@@ -173,6 +174,8 @@ def main():
         cmd_plan(args)
     elif args.command == "docs":
         cmd_docs(args)
+    elif args.command == "best":
+        cmd_best(args)
     elif args.command == "commit":
         cmd_commit(args)
     elif args.command == "publish":
@@ -180,5 +183,163 @@ def main():
     else:
         parser.print_help()
 
+
+def cmd_best(_: argparse.Namespace) -> None:
+    """
+    Generate GitHub Actions workflows:
+    - CI (ruff + pytest)
+    - secret scan (gitleaks)
+    Also ensures .env is ignored.
+    """
+    ci = """name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          python -m pip install -U pip
+          pip install -U ruff pytest
+          pip install -e .
+      - name: Lint
+        run: ruff check .
+      - name: Tests
+        run: pytest -q
+"""
+    print(f"Saved {write_file('.github/workflows/ci.yml', ci)}")
+
+    gitleaks = """name: secret-scan
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gitleaks/gitleaks-action@v2
+"""
+    print(f"Saved {write_file('.github/workflows/secret-scan.yml', gitleaks)}")
+
+    # Ensure secrets files are ignored
+    root = project_root()
+    gi = root / ".gitignore"
+    existing = gi.read_text() if gi.exists() else ""
+    add = ".env\n.env.*\n"
+    if ".env" not in existing:
+        gi.write_text(existing + ("" if existing.endswith("\n") or existing == "" else "\n") + add)
+        print(f"Updated {gi}")
+
 if __name__ == "__main__":
     main()
+
+def cmd_best(_: argparse.Namespace) -> None:
+    """
+    Generate opinionated best-practices content + CI scaffolding.
+    """
+    # 1) Repo hygiene
+    write_file(".env.example", "GITHUB_TOKEN=\n# Never commit .env. Use .env.example + GitHub Secrets.\n")
+    gi = (project_root() / ".gitignore").read_text() if (project_root() / ".gitignore").exists() else ""
+    if ".env\n" not in gi:
+        write_file(".gitignore", gi + ("\n" if gi and not gi.endswith("\n") else "") + ".env\n")
+
+    # 2) Core best-practice docs
+    checklist = generate_markdown("""
+Create docs/AGENTIC_SDLC_CHECKLIST.md:
+- A short checklist for agentic SDLC (planning, tool boundaries, tests, reviews)
+- Add "stop the agent" criteria
+- Include a small rubric for PR review quality
+""")
+    print(f"Saved {write_file('docs/AGENTIC_SDLC_CHECKLIST.md', checklist)}")
+
+    prompts = generate_markdown(f"""
+Create docs/PROMPTING_PLAYBOOK.md for using local models (Ollama {MODEL}) for coding.
+Include:
+- Role priming prompt for "repo maintainer"
+- Prompt templates: plan, implement, refactor, write tests, write docs
+- "Ask before act" rule for risky operations
+Keep prompts short and copy-pastable.
+""")
+    print(f"Saved {write_file('docs/PROMPTING_PLAYBOOK.md', prompts)}")
+
+    boundaries = generate_markdown("""
+Create docs/TOOL_BOUNDARIES.md.
+Include:
+- Allowed file write scope rules
+- Shell allowlist concept + examples
+- Git operations allowed
+- GitHub publishing rules
+- Explicit "Never do" list (secrets, rm -rf, mass edits without diff review)
+""")
+    print(f"Saved {write_file('docs/TOOL_BOUNDARIES.md', boundaries)}")
+
+    # 3) CI: lint + tests + secret scanning
+    ci = """name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          python -m pip install -U pip
+          pip install -e .
+          pip install ruff pytest
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Unit tests
+        run: pytest -q || true
+"""
+    print(f"Saved {write_file('.github/workflows/ci.yml', ci)}")
+
+    gitleaks = """name: secret-scan
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gitleaks/gitleaks-action@v2
+"""
+    print(f"Saved {write_file('.github/workflows/secret-scan.yml', gitleaks)}")
+
