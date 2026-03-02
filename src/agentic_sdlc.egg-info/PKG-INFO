@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: agentic-sdlc
+Version: 0.1.0
+Summary: Agentic SDLC harness using LangGraph + Ollama
+Requires-Python: >=3.10
+Requires-Dist: langchain
+Requires-Dist: langgraph
+Requires-Dist: langchain-ollama
+Requires-Dist: python-dotenv
+Requires-Dist: rich

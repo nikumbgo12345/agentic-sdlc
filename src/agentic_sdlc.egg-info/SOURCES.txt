@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+src/agentic_sdlc/__init__.py
+src/agentic_sdlc/agentic.py
+src/agentic_sdlc.egg-info/PKG-INFO
+src/agentic_sdlc.egg-info/SOURCES.txt
+src/agentic_sdlc.egg-info/dependency_links.txt
+src/agentic_sdlc.egg-info/entry_points.txt
+src/agentic_sdlc.egg-info/requires.txt
+src/agentic_sdlc.egg-info/top_level.txt
